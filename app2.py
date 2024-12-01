@@ -132,23 +132,22 @@ try:
         # Convert time to minutes
         minutes = selected_time.hour * 60 + selected_time.minute
 
-        # Target encode the selected day
-        day_encoding = target_encoder.transform(pd.DataFrame({'Day': [selected_day]}))['Day'].values[0]
+        # Target encode the 'Day' column
+        encoded_day = target_encoder.transform(pd.DataFrame({'Day': [selected_day]}))['Day'].values[0]
 
         # Create input feature array
-        input_features = np.array([[minutes, temperature, humidity, light_intensity, occupancy, day_encoding]])
+        input_features = np.array([[minutes, temperature, humidity, light_intensity, occupancy, encoded_day]])
 
-        # Ensure input matches the model's expected shape
+        # Scale features
         input_scaled = feature_scaler.transform(input_features)
-        
-        # Simulate a sequence of 9 identical timestamps
-        sequence = np.tile(input_scaled, (9, 1))
-        sequence = sequence.reshape(1, 9, input_scaled.shape[1])
 
-        
+        # Prepare sequence for LSTM (9 timesteps)
+        sequence = np.tile(input_scaled, (9, 1)).reshape(1, 9, -1)  # Shape: (1, 9, 6)
+
         # Make prediction
         prediction_scaled = model.predict(sequence)
         prediction = target_scaler.inverse_transform(prediction_scaled)[0][0]
+
         
         # Display prediction in a nice card
         st.markdown(
