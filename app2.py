@@ -3,11 +3,22 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+sns.set_theme(style = 'white', palette = 'viridis')
+pal = sns.color_palette('viridis')
 import tensorflow as tf
+# import keras
+# from keras.models import load_model
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import LSTM, Dense, Dropout
+# from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, root_mean_squared_error
 import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta
+import category_encoders as ce # i imported this for encoding the categorical/object variables
+import warnings
+warnings.filterwarnings('ignore')
 
 # Set page configuration
 st.set_page_config(
