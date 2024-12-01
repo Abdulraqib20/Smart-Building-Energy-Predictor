@@ -181,11 +181,11 @@ try:
     with tab3:
         metrics_cols = st.columns(2)
     with metrics_cols[0]:
-        st.metric("RMSE", "1.34 kWh")
-        st.metric("R² Score", "0.613")
+        st.metric("RMSE", "1.22 kWh")
+        st.metric("R² Score", "0.683")
     with metrics_cols[1]:
-        st.metric("MAE", "1.07 kWh")
-        st.metric("MAPE", "16.24%")
+        st.metric("MAE", "0.95 kWh")
+        st.metric("MAPE", "14.83%")
 
 except Exception as e:
     st.error(f"Error loading data or model: {str(e)}")
