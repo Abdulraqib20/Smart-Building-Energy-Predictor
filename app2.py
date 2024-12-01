@@ -72,7 +72,7 @@ def load_and_preprocess_data(file_path):
 
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model('second_model.keras')
+    return tf.keras.models.load_model('third_model.keras')
 
 # Load data and model
 try:
@@ -189,7 +189,7 @@ try:
 
 except Exception as e:
     st.error(f"Error loading data or model: {str(e)}")
-    st.info("Please ensure that 'generated_two.csv' and 'first_model.keras' are in the same directory as this script.")
+    st.info("Please ensure that Data and Model are in the same directory as this script.")
 
 # Footer
 st.markdown("---")
