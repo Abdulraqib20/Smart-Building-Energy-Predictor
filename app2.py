@@ -72,7 +72,7 @@ def load_and_preprocess_data(file_path):
 
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model('second.keras')
+    return tf.keras.models.load_model('second_model.keras')
 
 # Load data and model
 try:
