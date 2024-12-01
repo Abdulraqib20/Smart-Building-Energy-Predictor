@@ -64,12 +64,14 @@ based on various environmental and temporal factors.
 st.sidebar.title("Input Params")
 
 @st.cache_data
+@st.cache_data
 def load_and_preprocess_data(file_path):
     df = pd.read_csv(file_path)
-    
     df['Minutes'] = pd.to_datetime(df['Time'], format='%H:%M').dt.hour * 60 + pd.to_datetime(df['Time'], format='%H:%M').dt.minute
-    # df = pd.get_dummies(df, columns=['Day'])
-    return df
+    target_encoder = ce.TargetEncoder(cols=['Day'])
+    df['Day'] = target_encoder.fit_transform(df['Day'], df['Energy'])
+    return df, target_encoder
+
 
 @st.cache_resource
 def load_model():
@@ -129,36 +131,41 @@ try:
     if st.button("Predict Energy Consumption"):
         # Convert time to minutes
         minutes = selected_time.hour * 60 + selected_time.minute
-        
-        # Create day one-hot encoding
-        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        # day_encoding = [1 if day == selected_day else 0 for day in days]
-        
-        day_encoding = target_encoder.fit_transform(df['Day'], y)
-        
+
+        # Target encode the selected day
+        day_encoding = target_encoder.transform(pd.DataFrame({'Day': [selected_day]}))['Day'].values[0]
+
         # Create input feature array
-        input_features = np.array([[
-            minutes, temperature, humidity, light_intensity, occupancy, *day_encoding
-        ]])
-        
-        # Scale features
+        input_features = np.array([[minutes, temperature, humidity, light_intensity, occupancy, day_encoding]])
+
+        # Ensure input matches the model's expected shape
         input_scaled = feature_scaler.transform(input_features)
         
-        # Create sequence for LSTM (using the last 9 timestamps)
+        # Simulate a sequence of 9 identical timestamps
         sequence = np.tile(input_scaled, (9, 1))
         sequence = sequence.reshape(1, 9, input_scaled.shape[1])
+
         
         # Make prediction
         prediction_scaled = model.predict(sequence)
         prediction = target_scaler.inverse_transform(prediction_scaled)[0][0]
         
         # Display prediction in a nice card
-        st.markdown("""
-            <div class="metric-card">
-                <h3 style="color: #1f477c;">Predicted Energy Consumption</h3>
-                <h2 style="color: #2ecc71;">{:.2f} kWh</h2>
+        st.markdown(
+            f"""
+            <div style="border: 1px solid #ddd; padding: 10px; border-radius: 5px; background-color: #f9f9f9;">
+                <h3 style="color: #1f477c; text-align: center;">Predicted Energy Consumption</h3>
+                <h2 style="color: #2ecc71; text-align: center;">{prediction:.2f} kWh</h2>
             </div>
-        """.format(prediction), unsafe_allow_html=True)
+            """, 
+            unsafe_allow_html=True
+        )
+        # st.markdown("""
+        #     <div class="metric-card">
+        #         <h3 style="color: #1f477c;">Predicted Energy Consumption</h3>
+        #         <h2 style="color: #2ecc71;">{:.2f} kWh</h2>
+        #     </div>
+        # """.format(prediction), unsafe_allow_html=True)
         
         # Confidence interval
         confidence_interval = 2.40
@@ -201,7 +208,7 @@ try:
 
 except Exception as e:
     st.error(f"Error loading data or model: {str(e)}")
-    st.info("Please ensure that 'generated_two.csv' and 'first_model.keras' are in the same directory as this script.")
+    st.info("Please ensure that Dataset and Model are in the same directory as this script.")
 
 # Footer
 st.markdown("---")
