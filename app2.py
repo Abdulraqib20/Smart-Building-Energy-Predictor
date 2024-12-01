@@ -66,8 +66,9 @@ st.sidebar.title("Input Params")
 @st.cache_data
 def load_and_preprocess_data(file_path):
     df = pd.read_csv(file_path)
+    
     df['Minutes'] = pd.to_datetime(df['Time'], format='%H:%M').dt.hour * 60 + pd.to_datetime(df['Time'], format='%H:%M').dt.minute
-    df = pd.get_dummies(df, columns=['Day'])
+    # df = pd.get_dummies(df, columns=['Day'])
     return df
 
 @st.cache_resource
@@ -79,16 +80,25 @@ try:
     df = load_and_preprocess_data('generated_two.csv')
     model = load_model()
     
-    # Initialize scalers
-    features_to_use = ['Minutes', 'Temp', 'Humidity', 'Light_Intensity', 'Occupancy'] + [col for col in df.columns if col.startswith('Day_')]
-    X = df[features_to_use].values
-    y = df['Energy'].values
+    # Define features and target
+    features_to_use = ['Minutes', 'Temp', 'Humidity', 'Light_Intensity', 'Occupancy']
+    X = df[features_to_use]
+    y = df['Energy']
+    
+    # Initialize Target Encoder from category encoders
+    target_encoder = ce.TargetEncoder(cols=['Day'])
+
+    X['Day'] = target_encoder.fit_transform(df['Day'], y)
+    
+    # features_to_use = ['Minutes', 'Temp', 'Humidity', 'Light_Intensity', 'Occupancy'] + [col for col in df.columns if col.startswith('Day_')]
+    # X = df[features_to_use].values
+    # y = df['Energy'].values
     
     feature_scaler = MinMaxScaler()
+    X_scaled = feature_scaler.fit_transform(X.values)
+
     target_scaler = MinMaxScaler()
-    
-    X_scaled = feature_scaler.fit_transform(X)
-    y_scaled = target_scaler.fit_transform(y.reshape(-1, 1))
+    y_scaled = target_scaler.fit_transform(y.values.reshape(-1, 1))
     
     # Main content
     st.subheader("📊 Real-time Prediction")
@@ -122,7 +132,9 @@ try:
         
         # Create day one-hot encoding
         days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        day_encoding = [1 if day == selected_day else 0 for day in days]
+        # day_encoding = [1 if day == selected_day else 0 for day in days]
+        
+        day_encoding = target_encoder.fit_transform(df['Day'], y)
         
         # Create input feature array
         input_features = np.array([[
