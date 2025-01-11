@@ -12,6 +12,8 @@ from datetime import timedelta
 import warnings
 warnings.filterwarnings('ignore')
 
+
+
 # Set page configuration
 st.set_page_config(
     page_title="Smart Building Energy Predictor",
@@ -275,18 +277,32 @@ try:
         # Transform predictions back to original scale
         final_prediction = scaler_y.inverse_transform(ensemble_pred.reshape(-1, 1))[0][0]
         prediction_uncertainty = scaler_y.inverse_transform(uncertainty.reshape(-1, 1))[0][0]
+        
+        # Display current prediction in a metric card
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Current Prediction", f"{final_prediction:.2f} kWh")
+        with col2:
+            st.metric("Uncertainty (±)", f"{prediction_uncertainty*2:.2f} kWh")
+        with col3:
+            confidence_interval = f"{(final_prediction - 2*prediction_uncertainty):.2f} - {(final_prediction + 2*prediction_uncertainty):.2f} kWh"
+            st.metric("95% Confidence Interval", confidence_interval)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
 
         # Add a time series plot of predicted energy
         st.subheader("Predicted Energy Consumption Pattern")
         
         # Generate a sequence of predictions for the next few hours
-        future_times = [(datetime.now() + timedelta(hours=i)).strftime('%H:%M') 
+        current_time = datetime.now().replace(hour=hour, minute=minutes % 60)
+        future_times = [(current_time + timedelta(hours=i)).strftime('%H:%M') 
                     for i in range(6)]
         future_predictions = []
         future_uncertainties = []
         
-        for _ in range(6):
-            input_data[0, 0] = (_ * 60 + minutes) % (24 * 60)  # Update time
+        for i in range(6):
+            input_data[0, 0] = (i * 60 + minutes) % (24 * 60)  # Update time
             seq, rf_in = prepare_sequence_input(input_data, model_params['seq_length'], scaler_X)
             
             # Get predictions
@@ -316,7 +332,8 @@ try:
             y=future_predictions,
             mode='lines+markers',
             name='Predicted Energy',
-            line=dict(color='rgb(31, 71, 124)')
+            line=dict(color='rgb(31, 71, 124)', width=3),
+            marker=dict(size=10)
         ))
 
         # Add confidence intervals
@@ -327,14 +344,49 @@ try:
             fill='toself',
             fillcolor='rgba(31, 71, 124, 0.2)',
             line=dict(color='rgba(255,255,255,0)'),
-            name='95% Confidence Interval'
+            name='95% Confidence Interval',
+            hoverinfo='skip'
+        ))
+
+        # Highlight current prediction point
+        fig.add_trace(go.Scatter(
+            x=[future_times[0]],
+            y=[future_predictions[0]],
+            mode='markers',
+            name='Current Prediction',
+            marker=dict(
+                color='red',
+                size=15,
+                symbol='star'
+            )
         ))
 
         fig.update_layout(
-            title='Predicted Energy Consumption Pattern',
+            title={
+                'text': 'Energy Consumption Forecast',
+                'y':0.95,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'
+            },
             xaxis_title='Time',
             yaxis_title='Energy Consumption (kWh)',
-            showlegend=True
+            showlegend=True,
+            hovermode='x unified',
+            hoverlabel=dict(bgcolor="white"),
+            yaxis=dict(
+                tickformat='.2f',
+                zeroline=True,
+                zerolinewidth=2,
+                zerolinecolor='lightgray'
+            )
+        )
+
+        # Add custom hover template
+        fig.update_traces(
+            hovertemplate="<b>Time:</b> %{x}<br>" +
+                         "<b>Energy:</b> %{y:.2f} kWh<br>",
+            selector=dict(name='Predicted Energy')
         )
 
         st.plotly_chart(fig, use_container_width=True)
